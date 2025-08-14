@@ -14,7 +14,7 @@ function ResetButton({ handleReset }: { handleReset: () => void }) {
     <Button
       onClick={handleReset}
       variant="ghost"
-      className="flex items-center justify-center gap-2 text-gray-500 hover:text-red-500"
+      className="flex items-center justify-center gap-2 text-muted-foreground hover:text-red-400"
     >
       <Undo2 className="h-4 w-4" />
       <span>Reset</span>
@@ -38,10 +38,10 @@ function ArgsRenderer({ args }: { args: Record<string, any> }) {
             key={`args-${k}`}
             className="flex flex-col items-start gap-1"
           >
-            <p className="text-sm leading-[18px] text-wrap text-gray-600">
+            <p className="text-sm leading-[18px] text-wrap text-muted-foreground">
               {prettifyText(k)}:
             </p>
-            <span className="w-full max-w-full rounded-xl bg-zinc-100 p-3 text-[13px] leading-[18px] text-black">
+            <span className="w-full max-w-full rounded-xl bg-secondary p-3 text-[13px] leading-[18px] text-foreground">
               <MarkdownText>{value}</MarkdownText>
             </span>
           </div>
@@ -107,9 +107,9 @@ function ResponseComponent({
   };
 
   return (
-    <div className="flex w-full flex-col items-start gap-4 rounded-xl border-[1px] border-gray-300 p-6">
+    <div className="flex w-full flex-col items-start gap-4 rounded-xl border-[1px] border-border p-6 bg-card/30">
       <div className="flex w-full items-center justify-between">
-        <p className="text-base font-semibold text-black">
+        <p className="text-base font-semibold text-foreground">
           Respond to assistant
         </p>
         <ResetButton
@@ -161,7 +161,7 @@ function AcceptComponent({
   ) => Promise<void>;
 }) {
   return (
-    <div className="flex w-full flex-col items-start gap-4 rounded-lg border-[1px] border-gray-300 p-6">
+    <div className="flex w-full flex-col items-start gap-4 rounded-lg border-[1px] border-border p-6 bg-card/30">
       {actionRequestArgs && Object.keys(actionRequestArgs).length > 0 && (
         <ArgsRenderer args={actionRequestArgs} />
       )}
@@ -258,9 +258,9 @@ function EditAndOrAcceptComponent({
   };
 
   return (
-    <div className="flex w-full flex-col items-start gap-4 rounded-lg border-[1px] border-gray-300 p-6">
+    <div className="flex w-full flex-col items-start gap-4 rounded-lg border-[1px] border-border p-6 bg-card/30">
       <div className="flex w-full items-center justify-between">
-        <p className="text-base font-semibold text-black">{header}</p>
+        <p className="text-base font-semibold text-foreground">{header}</p>
         <ResetButton handleReset={handleReset} />
       </div>
 
@@ -508,7 +508,7 @@ export function InboxItemInput({
         {supportsMultipleMethods ? (
           <div className="mx-auto mt-3 flex items-center gap-3">
             <Separator className="w-[full]" />
-            <p className="text-sm text-gray-500">Or</p>
+            <p className="text-sm text-muted-foreground">Or</p>
             <Separator className="w-full" />
           </div>
         ) : null}
@@ -520,7 +520,7 @@ export function InboxItemInput({
           onResponseChange={onResponseChange}
           handleSubmit={handleSubmit}
         />
-        {streaming && <p className="text-sm text-gray-600">Running...</p>}
+        {streaming && <p className="text-sm text-muted-foreground">Running...</p>}
         {streamFinished && (
           <p className="text-base font-medium text-green-600">
             Successfully finished Graph invocation.

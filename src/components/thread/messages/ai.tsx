@@ -156,7 +156,9 @@ export function AssistantMessage({
           <>
             {contentString.length > 0 && (
               <div className="py-1">
-                <MarkdownText>{contentString}</MarkdownText>
+                <div className="relative w-full max-w-5xl rounded-2xl border border-border/80 bg-card/50 bg-gradient-to-b from-primary/15 to-transparent px-6 py-4 backdrop-blur-sm shadow-[0_6px_24px_rgba(0,0,0,0.35),0_0_24px_rgba(122,162,255,0.12)] ring-1 ring-primary/15">
+                  <MarkdownText>{contentString}</MarkdownText>
+                </div>
               </div>
             )}
 

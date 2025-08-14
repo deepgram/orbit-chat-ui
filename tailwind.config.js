@@ -15,7 +15,7 @@ module.exports = {
       },
       components: {
         ".scrollbar-pretty":
-          "overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent",
+          "overflow-y-scroll [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-primary\/40 [&::-webkit-scrollbar-track]:bg-transparent",
       },
       colors: {
         background: "hsl(var(--background))",
