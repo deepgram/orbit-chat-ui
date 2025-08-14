@@ -203,6 +203,7 @@ export function AssistantMessage({
                 content={contentString}
                 isLoading={isLoading}
                 isAiMessage={true}
+                hideCopyButton={(!hideToolCalls && (toolCallsHaveContents || hasToolCalls || hasAnthropicToolCalls))}
                 handleRegenerate={() => handleRegenerate(parentCheckpoint)}
               />
             </div>

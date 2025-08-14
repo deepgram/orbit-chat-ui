@@ -1,7 +1,7 @@
 import {
   XIcon,
   SendHorizontal,
-  RefreshCcw,
+  PlayCircle,
   Pencil,
   Copy,
   CopyCheck,
@@ -12,8 +12,9 @@ import { TooltipIconButton } from "../tooltip-icon-button";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
-function ContentCopyable({
+export function ContentCopyable({
   content,
   disabled,
 }: {
@@ -22,11 +23,51 @@ function ContentCopyable({
 }) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+  const handleCopy = async (
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+  ) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+
+    const copyWithAsyncClipboard = async (text: string) => {
+      try {
+        if (navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch {
+        // fall through to fallback
+      }
+      return false;
+    };
+
+    const copyWithFallback = (text: string) => {
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "absolute";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        const success = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        return success;
+      } catch {
+        return false;
+      }
+    };
+
+    const didCopy = (await copyWithAsyncClipboard(content)) || copyWithFallback(content);
+    if (didCopy) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success("Copied to clipboard");
+    } else {
+      toast.error("Failed to copy", {
+        description: "Your browser blocked clipboard access.",
+      });
+    }
   };
 
   return (
@@ -119,6 +160,7 @@ export function CommandBar({
   content,
   isHumanMessage,
   isAiMessage,
+  hideCopyButton,
   isEditing,
   setIsEditing,
   handleSubmitEdit,
@@ -128,6 +170,7 @@ export function CommandBar({
   content: string;
   isHumanMessage?: boolean;
   isAiMessage?: boolean;
+  hideCopyButton?: boolean;
   isEditing?: boolean;
   setIsEditing?: React.Dispatch<React.SetStateAction<boolean>>;
   handleSubmitEdit?: () => void;
@@ -190,18 +233,20 @@ export function CommandBar({
 
   return (
     <div className="flex items-center gap-2">
-      <ContentCopyable
-        content={content}
-        disabled={isLoading}
-      />
+      {!hideCopyButton && (
+        <ContentCopyable
+          content={content}
+          disabled={isLoading}
+        />
+      )}
       {isAiMessage && !!handleRegenerate && (
         <TooltipIconButton
           disabled={isLoading}
-          tooltip="Refresh"
+          tooltip="Resume from"
           variant="ghost"
           onClick={handleRegenerate}
         >
-          <RefreshCcw />
+          <PlayCircle />
         </TooltipIconButton>
       )}
       {showEdit && (

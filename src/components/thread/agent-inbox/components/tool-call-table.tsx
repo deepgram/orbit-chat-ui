@@ -1,5 +1,6 @@
 import { ToolCall } from "@langchain/core/messages/tool";
 import { unknownToPrettyDate } from "../utils";
+import { ContentCopyable } from "../../messages/shared";
 
 export function ToolCallTable({ toolCall }: { toolCall: ToolCall }) {
   return (
@@ -8,10 +9,20 @@ export function ToolCallTable({ toolCall }: { toolCall: ToolCall }) {
         <thead>
           <tr>
             <th
-              className="bg-secondary px-2 py-0 text-left text-sm"
+              className="bg-secondary px-2 py-1 text-left text-sm"
               colSpan={2}
             >
-              {toolCall.name}
+              <div className="flex items-center justify-between gap-2">
+                <span>{toolCall.name}</span>
+                <ContentCopyable
+                  content={JSON.stringify(
+                    { name: toolCall.name, id: toolCall.id, args: toolCall.args },
+                    null,
+                    2,
+                  )}
+                  disabled={false}
+                />
+              </div>
             </th>
           </tr>
         </thead>
@@ -28,7 +39,7 @@ export function ToolCallTable({ toolCall }: { toolCall: ToolCall }) {
             }
 
             try {
-              valueStr = valueStr || JSON.stringify(value, null);
+              valueStr = valueStr || JSON.stringify(value, null, 2);
             } catch (_) {
               // failed to stringify, just assign an empty string
               valueStr = "";
@@ -40,7 +51,7 @@ export function ToolCallTable({ toolCall }: { toolCall: ToolCall }) {
                 className="border-t"
               >
                 <td className="w-1/3 px-2 py-1 text-xs font-medium">{key}</td>
-                <td className="px-2 py-1 font-mono text-xs">{valueStr}</td>
+                <td className="px-2 py-1 font-mono text-xs whitespace-pre-wrap break-words">{valueStr.replaceAll("\\n", "\n")}</td>
               </tr>
             );
           })}

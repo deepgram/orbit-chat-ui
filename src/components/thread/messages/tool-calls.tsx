@@ -2,9 +2,69 @@ import { AIMessage, ToolMessage } from "@langchain/langgraph-sdk";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { ContentCopyable } from "./shared";
 
 function isComplexValue(value: any): boolean {
   return Array.isArray(value) || (typeof value === "object" && value !== null);
+}
+
+function normalizeNewlines(value: any): string {
+  return String(value).replaceAll("\\n", "\n");
+}
+
+function ValueRenderer({ value }: { value: any }) {
+  if (typeof value === "string") {
+    return (
+      <code className="rounded bg-secondary px-2 py-1 font-mono text-sm whitespace-pre-wrap break-words">
+        {normalizeNewlines(value)}
+      </code>
+    );
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return (
+      <code className="rounded bg-secondary px-2 py-1 font-mono text-sm whitespace-pre-wrap break-words">
+        {String(value)}
+      </code>
+    );
+  }
+
+  if (Array.isArray(value)) {
+    return (
+      <table className="min-w-full divide-y divide-border">
+        <tbody className="divide-y divide-border">
+          {value.map((item, idx) => (
+            <tr key={idx}>
+              <td className="px-4 py-2 text-sm font-medium whitespace-nowrap text-foreground">
+                {idx}
+              </td>
+              <td className="px-4 py-2 text-sm text-muted-foreground">
+                <ValueRenderer value={item} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  // object
+  return (
+    <table className="min-w-full divide-y divide-border">
+      <tbody className="divide-y divide-border">
+        {Object.entries(value).map(([k, v], idx) => (
+          <tr key={idx}>
+            <td className="px-4 py-2 text-sm font-medium whitespace-nowrap text-foreground">
+              {k}
+            </td>
+            <td className="px-4 py-2 text-sm text-muted-foreground">
+              <ValueRenderer value={v} />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 export function ToolCalls({
@@ -25,14 +85,26 @@ export function ToolCalls({
             className="overflow-hidden rounded-lg border border-border/80 bg-card/40 bg-gradient-to-b from-cyan-300/10 to-transparent ring-1 ring-cyan-300/10"
           >
             <div className="border-b border-border bg-secondary/80 px-4 py-2">
-              <h3 className="font-medium text-foreground">
-                {tc.name}
-                {tc.id && (
-                  <code className="ml-2 rounded bg-secondary px-2 py-1 text-sm">
-                    {tc.id}
-                  </code>
-                )}
-              </h3>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-medium text-foreground">
+                  {tc.name}
+                  {tc.id && (
+                    <code className="ml-2 rounded bg-secondary px-2 py-1 text-sm">
+                      {tc.id}
+                    </code>
+                  )}
+                </h3>
+                <ContentCopyable
+                  content={normalizeNewlines(
+                    JSON.stringify(
+                      { name: tc.name, id: tc.id, args },
+                      null,
+                      2,
+                    ),
+                  )}
+                  disabled={false}
+                />
+              </div>
             </div>
             {hasArgs ? (
               <table className="min-w-full divide-y divide-border">
@@ -43,13 +115,7 @@ export function ToolCalls({
                         {key}
                       </td>
                       <td className="px-4 py-2 text-sm text-muted-foreground">
-                        {isComplexValue(value) ? (
-                          <code className="rounded bg-secondary px-2 py-1 font-mono text-sm break-all">
-                            {JSON.stringify(value, null, 2)}
-                          </code>
-                        ) : (
-                          String(value)
-                        )}
+                        <ValueRenderer value={value} />
                       </td>
                     </tr>
                   ))}
@@ -84,19 +150,20 @@ export function ToolResult({ message }: { message: ToolMessage }) {
   const contentStr = isJsonContent
     ? JSON.stringify(parsedContent, null, 2)
     : String(message.content);
-  const contentLines = contentStr.split("\n");
-  const shouldTruncate = contentLines.length > 4 || contentStr.length > 500;
+  const normalizedContentStr = normalizeNewlines(contentStr);
+  const contentLines = normalizedContentStr.split("\n");
+  const shouldTruncate = contentLines.length > 4 || normalizedContentStr.length > 500;
   const displayedContent =
     shouldTruncate && !isExpanded
-      ? contentStr.length > 500
-        ? contentStr.slice(0, 500) + "..."
+      ? normalizedContentStr.length > 500
+        ? normalizedContentStr.slice(0, 500) + "..."
         : contentLines.slice(0, 4).join("\n") + "\n..."
-      : contentStr;
+      : normalizedContentStr;
 
   return (
       <div className="mx-auto grid max-w-5xl grid-rows-[1fr_auto] gap-2">
-      <div className="overflow-hidden rounded-lg border border-border/80 bg-card/40 bg-gradient-to-b from-cyan-300/10 to-transparent ring-1 ring-cyan-300/10">
-        <div className="border-b border-border bg-secondary/80 px-4 py-2">
+      <div className="overflow-hidden rounded-lg border border-border/80 bg-card/40 bg-gradient-to-b from-violet-300/10 to-transparent ring-1 ring-violet-300/10">
+        <div className="border-b border-border bg-accent/80 px-4 py-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             {message.name ? (
               <h3 className="font-medium text-foreground">
@@ -108,15 +175,21 @@ export function ToolResult({ message }: { message: ToolMessage }) {
             ) : (
               <h3 className="font-medium text-foreground">Tool Result</h3>
             )}
-            {message.tool_call_id && (
-              <code className="ml-2 rounded bg-secondary px-2 py-1 text-sm">
-                {message.tool_call_id}
-              </code>
-            )}
+            <div className="flex items-center gap-2">
+              {message.tool_call_id && (
+                <code className="rounded bg-secondary px-2 py-1 text-sm">
+                  {message.tool_call_id}
+                </code>
+              )}
+              <ContentCopyable
+                content={normalizeNewlines(contentStr)}
+                disabled={false}
+              />
+            </div>
           </div>
         </div>
         <motion.div
-          className="min-w-full bg-secondary"
+          className="min-w-full bg-accent/20"
           initial={false}
           animate={{ height: "auto" }}
           transition={{ duration: 0.3 }}
@@ -151,13 +224,7 @@ export function ToolResult({ message }: { message: ToolMessage }) {
                               {key}
                             </td>
                             <td className="px-4 py-2 text-sm text-muted-foreground">
-                              {isComplexValue(value) ? (
-                                <code className="rounded bg-secondary px-2 py-1 font-mono text-sm break-all">
-                                  {JSON.stringify(value, null, 2)}
-                                </code>
-                              ) : (
-                                String(value)
-                              )}
+                              <ValueRenderer value={value} />
                             </td>
                           </tr>
                         );
@@ -165,7 +232,7 @@ export function ToolResult({ message }: { message: ToolMessage }) {
                     </tbody>
                   </table>
                 ) : (
-                  <code className="block text-sm">{displayedContent}</code>
+                  <code className="block text-sm whitespace-pre-wrap break-words">{displayedContent}</code>
                 )}
               </motion.div>
             </AnimatePresence>
@@ -176,7 +243,7 @@ export function ToolResult({ message }: { message: ToolMessage }) {
               parsedContent.length > 5)) && (
             <motion.button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex w-full cursor-pointer items-center justify-center border-t-[1px] border-border py-2 text-muted-foreground transition-all duration-200 ease-in-out hover:bg-secondary hover:text-foreground"
+              className="flex w-full cursor-pointer items-center justify-center border-t-[1px] border-border py-2 text-muted-foreground transition-all duration-200 ease-in-out hover:bg-accent hover:text-foreground"
               initial={{ scale: 1 }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
