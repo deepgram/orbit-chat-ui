@@ -74,9 +74,13 @@ export function ToolCalls({
 }) {
   if (!toolCalls || toolCalls.length === 0) return null;
 
+  // Hide write_todos tool calls per requirements
+  const filteredToolCalls = toolCalls.filter((tc) => tc.name !== "write_todos");
+  if (filteredToolCalls.length === 0) return null;
+
   return (
     <div className="mx-auto grid max-w-5xl grid-rows-[1fr_auto] gap-2">
-      {toolCalls.map((tc, idx) => {
+      {filteredToolCalls.map((tc, idx) => {
         const args = tc.args as Record<string, any>;
         const hasArgs = Object.keys(args).length > 0;
         return (
@@ -134,6 +138,58 @@ export function ToolCalls({
 export function ToolResult({ message }: { message: ToolMessage }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Special handling for write_todos tool results: render a themed todos table
+  const isWriteTodos = message.name === "write_todos";
+
+  function parseTodosFromContent(raw: unknown): Array<{ content: string; status: string }>|null {
+    try {
+      if (Array.isArray(raw)) {
+        return raw as Array<{ content: string; status: string }>;
+      }
+      if (typeof raw === "string") {
+        const trimmed = raw.trim();
+        // Try direct JSON parse first
+        if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) return parsed;
+          if (parsed && Array.isArray((parsed as any).todos)) return (parsed as any).todos;
+        }
+        // Extract array substring like: Updated todo list to [ { 'content': '...', 'status': '...' }, ... ]
+        const start = trimmed.indexOf("[");
+        const end = trimmed.lastIndexOf("]");
+        if (start !== -1 && end !== -1 && end > start) {
+          let arrStr = trimmed.slice(start, end + 1);
+          // Convert single quotes to double quotes to form valid JSON
+          arrStr = arrStr.replace(/'/g, '"');
+          try {
+            const parsed = JSON.parse(arrStr);
+            if (Array.isArray(parsed)) return parsed;
+          } catch (_) {
+            // fall through
+          }
+        }
+      }
+      if (typeof raw === "object" && raw !== null) {
+        const asObj = raw as any;
+        if (Array.isArray(asObj.todos)) return asObj.todos;
+      }
+    } catch {
+      // ignore parse errors, fall back to default rendering
+    }
+    return null;
+  }
+
+  function getStatusMeta(statusRaw: string | undefined): { label: string; dotClass: string } {
+    const status = (statusRaw || "pending").toLowerCase();
+    if (status === "completed" || status === "done") {
+      return { label: "Completed", dotClass: "bg-green-500" };
+    }
+    if (status === "in_progress" || status === "in-progress" || status === "working") {
+      return { label: "In Progress", dotClass: "bg-yellow-400" };
+    }
+    return { label: "Pending", dotClass: "bg-gray-400" };
+  }
+
   let parsedContent: any;
   let isJsonContent = false;
 
@@ -167,24 +223,30 @@ export function ToolResult({ message }: { message: ToolMessage }) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             {message.name ? (
               <h3 className="font-medium text-foreground">
-                Tool Result:{" "}
-                <code className="rounded bg-secondary px-2 py-1">
-                  {message.name}
-                </code>
+                {isWriteTodos ? (
+                  <span>Todo List</span>
+                ) : (
+                  <>
+                    Tool Result:{" "}
+                    <code className="rounded bg-secondary px-2 py-1">{message.name}</code>
+                  </>
+                )}
               </h3>
             ) : (
               <h3 className="font-medium text-foreground">Tool Result</h3>
             )}
             <div className="flex items-center gap-2">
-              {message.tool_call_id && (
+              {!isWriteTodos && message.tool_call_id && (
                 <code className="rounded bg-secondary px-2 py-1 text-sm">
                   {message.tool_call_id}
                 </code>
               )}
-              <ContentCopyable
-                content={normalizeNewlines(contentStr)}
-                disabled={false}
-              />
+              {!isWriteTodos && (
+                <ContentCopyable
+                  content={normalizeNewlines(contentStr)}
+                  disabled={false}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -206,7 +268,43 @@ export function ToolResult({ message }: { message: ToolMessage }) {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.2 }}
               >
-                {isJsonContent ? (
+                {isWriteTodos ? (
+                  (() => {
+                    const todos = parseTodosFromContent(message.content);
+                    if (!todos || todos.length === 0) {
+                      // Fallback to default rendering if unable to parse
+                      return (
+                        <code className="block text-sm whitespace-pre-wrap break-words">{displayedContent}</code>
+                      );
+                    }
+                    return (
+                      <table className="min-w-full divide-y divide-border">
+                        <thead>
+                          <tr>
+                            <th className="px-4 py-2 text-left text-sm font-semibold text-foreground">Todo</th>
+                            <th className="px-4 py-2 text-left text-sm font-semibold text-foreground">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {todos.map((t, idx) => {
+                            const { label, dotClass } = getStatusMeta(t.status);
+                            return (
+                              <tr key={idx}>
+                                <td className="px-4 py-2 text-sm text-muted-foreground">
+                                  {t.content}
+                                </td>
+                                <td className="px-4 py-2 text-sm text-muted-foreground">
+                                  <span className={`inline-block h-2 w-2 rounded-full ${dotClass} mr-2 align-middle`} />
+                                  <span className="align-middle">{label}</span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    );
+                  })()
+                ) : isJsonContent ? (
                   <table className="min-w-full divide-y divide-border">
                     <tbody className="divide-y divide-border">
                       {(Array.isArray(parsedContent)
@@ -237,7 +335,7 @@ export function ToolResult({ message }: { message: ToolMessage }) {
               </motion.div>
             </AnimatePresence>
           </div>
-          {((shouldTruncate && !isJsonContent) ||
+          {!isWriteTodos && ((shouldTruncate && !isJsonContent) ||
             (isJsonContent &&
               Array.isArray(parsedContent) &&
               parsedContent.length > 5)) && (
