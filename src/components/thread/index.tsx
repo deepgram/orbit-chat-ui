@@ -21,7 +21,6 @@ import {
   PanelRightClose,
   SquarePen,
   XIcon,
-  Plus,
   CircleX,
 } from "lucide-react";
 import { useQueryState, parseAsBoolean } from "nuqs";
@@ -496,23 +495,7 @@ export function Thread() {
                             </Label>
                           </div>
                         </div>
-                        <Label
-                          htmlFor="file-input"
-                          className="flex cursor-pointer items-center gap-2"
-                        >
-                          <Plus className="size-5 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            Upload PDF or Image
-                          </span>
-                        </Label>
-                        <input
-                          id="file-input"
-                          type="file"
-                          onChange={handleFileUpload}
-                          multiple
-                          accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
-                          className="hidden"
-                        />
+                        
                         {stream.isLoading ? (
                           <Button
                             key="stop"
